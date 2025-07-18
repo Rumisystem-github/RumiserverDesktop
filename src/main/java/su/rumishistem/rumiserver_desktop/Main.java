@@ -1,15 +1,15 @@
 package su.rumishistem.rumiserver_desktop;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
+import java.awt.SystemTray;
 import java.io.*;
 import javax.swing.*;
 
 import su.rumishistem.rumiserver_desktop.Form.SetupForm;
+import su.rumishistem.rumiserver_desktop.Type.OSType;
 
 public class Main {
 	public static File ConfigFile = null;
+	public static OSType OS = OSType.None;
 
 	public static void main(String[] args) throws IOException {
 		//システムトレイが使えるかチェックする
@@ -22,9 +22,11 @@ public class Main {
 		String OSName = System.getProperty("os.name").toUpperCase();
 		if (OSName.contains("WIN")) {
 			//Windows
+			OS = OSType.Windows;
 			ConfigFile = new File(System.getenv("APPDATA") + "\\RumiServer\\Config.json");
 		} else if (OSName.contains("NUX") || OSName.contains("NIX") || OSName.contains("AIX")) {
 			//Linux
+			OS = OSType.Linux;
 			ConfigFile = new File(System.getProperty("user.home") + "/.config/RumiServer/Config.json");
 		} else {
 			JOptionPane.showMessageDialog(null, "サポートされていないOSです。", "エラー", JOptionPane.ERROR_MESSAGE);
@@ -38,39 +40,6 @@ public class Main {
 			return;
 		}
 
-		//メニュー
-		PopupMenu TrayMenu = new PopupMenu();
-
-		//メニューの終了ボタン
-		MenuItem ExitItem = new MenuItem("終了");
-		ExitItem.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				System.exit(0);
-			}
-		});
-		TrayMenu.add(ExitItem);
-
-		//タスクトレイに常駐するやつ
-		TrayIcon TI = new TrayIcon(new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB), "るみさーばーデスクトップ", TrayMenu);
-		TI.setImageAutoSize(true);
-
-		//通知をクリックした時の動作
-		TI.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				JOptionPane.showMessageDialog(null, "通知をクリックしました");
-			}
-		});
-
-		try {
-			SystemTray Tray = SystemTray.getSystemTray();
-			Tray.add(TI);
-
-			TI.displayMessage("るみさーばーデスクトップ", "常駐しました", TrayIcon.MessageType.INFO);
-		} catch (AWTException EX) {
-			EX.printStackTrace();
-			JOptionPane.showMessageDialog(null, "タスクトレイに常駐失敗", "エラー", JOptionPane.ERROR_MESSAGE);
-		}
+		new BackgroundService();
 	}
 }
