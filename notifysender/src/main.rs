@@ -1,12 +1,27 @@
+use std::env;
 use notify_rust::Notification;
 
 fn main() {
-    Notification::new()
-        .summary("新しい通知です")
-        .body("これはRustアプリケーションからのテスト通知です。")
-        .icon("dialog-information") // 通知に表示されるアイコン (OSによって表示方法が異なる場合があります)
-        .timeout(5000) // 通知の表示時間 (ミリ秒)
-		.appname("るみさーばーデスクトップ")
+	let arg_list: Vec<String> = env::args().collect();
+
+	if arg_list.len() != 4 {
+		println!("引数が足りません。");
+		println!("\"アプリ名\" \"タイトル\" \"本文\"");
+		return;
+	}
+
+    let notification = Notification::new()
+        .summary(&arg_list[2])
+        .body(&arg_list[3])
+		.action("default", "click")
+        .timeout(5000)
+		.appname(&arg_list[1])
         .show()
         .unwrap();
+
+	notification.wait_for_action(|action| match action {
+		"default" => std::process::exit(1),
+		"__closed" => std::process::exit(0),
+		_ => std::process::exit(255)
+	});
 }

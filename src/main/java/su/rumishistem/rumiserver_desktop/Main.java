@@ -4,12 +4,16 @@ import java.awt.SystemTray;
 import java.io.*;
 import javax.swing.*;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import su.rumishistem.rumi_java_lib.RESOURCE.RESOURCE_MANAGER;
 import su.rumishistem.rumiserver_desktop.Form.SetupForm;
-import su.rumishistem.rumiserver_desktop.Type.OSType;
 
 public class Main {
 	public static File ConfigFile = null;
-	public static OSType OS = OSType.None;
+	public static String NotifycationProgramPath = null;
+	public static JsonNode ConfigData = null;
 
 	public static void main(String[] args) throws IOException {
 		//システムトレイが使えるかチェックする
@@ -20,14 +24,22 @@ public class Main {
 
 		//OSごとに処理を別ける
 		String OSName = System.getProperty("os.name").toUpperCase();
-		if (OSName.contains("WIN")) {
-			//Windows
-			OS = OSType.Windows;
-			ConfigFile = new File(System.getenv("APPDATA") + "\\RumiServer\\Config.json");
-		} else if (OSName.contains("NUX") || OSName.contains("NIX") || OSName.contains("AIX")) {
+		if (OSName.contains("NUX") || OSName.contains("NIX") || OSName.contains("AIX")) {
 			//Linux
-			OS = OSType.Linux;
 			ConfigFile = new File(System.getProperty("user.home") + "/.config/RumiServer/Config.json");
+
+			//通知を発行するプログラムを置く
+			NotifycationProgramPath = System.getProperty("user.home") + "/.local/bin/rumiserver_notifycation";
+			File NotifycationProgramFile = new File(NotifycationProgramPath);
+			if (NotifycationProgramFile.exists() == false) {
+				NotifycationProgramFile.createNewFile();
+				NotifycationProgramFile.setExecutable(true);
+
+				FileOutputStream FOS = new FileOutputStream(NotifycationProgramFile);
+				FOS.write(new RESOURCE_MANAGER(Main.class).getResourceData("/notifysender_linux"));
+				FOS.flush();
+				FOS.close();
+			}
 		} else {
 			JOptionPane.showMessageDialog(null, "サポートされていないOSです。", "エラー", JOptionPane.ERROR_MESSAGE);
 			return;
@@ -38,6 +50,8 @@ public class Main {
 			//セットアップを開く
 			new SetupForm();
 			return;
+		} else {
+			ConfigData = new ObjectMapper().readTree(ConfigFile);
 		}
 
 		new BackgroundService();

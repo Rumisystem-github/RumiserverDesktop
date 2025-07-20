@@ -7,8 +7,20 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.JOptionPane;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import su.rumishistem.rumi_java_lib.WebSocket.Client.WebSocketClient;
+import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.CLOSE_EVENT;
+import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.CONNECT_EVENT;
+import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.MESSAGE_EVENT;
+import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.WS_EVENT_LISTENER;
 
 public class BackgroundService {
 	private enum NotifyAction {
@@ -46,7 +58,91 @@ public class BackgroundService {
 			SystemTray Tray = SystemTray.getSystemTray();
 			Tray.add(TI);
 
-			SendNotify("るみさーばーデスクトップ", "常駐しました");
+			new Thread(new Runnable() {
+				@Override
+				public void run() {
+					String HandShakeID = "hs";
+
+					WebSocketClient WS = new WebSocketClient();
+					ScheduledExecutorService[] Scheduler = {null};
+					boolean[] HandShakeOK = {false};
+					int[] HeartBeat = {0};
+
+					WS.SET_EVENT_LISTENER(new WS_EVENT_LISTENER() {
+						@Override
+						public void MESSAGE(MESSAGE_EVENT e) {
+							try {
+								JsonNode message = new ObjectMapper().readTree(e.getMessage());
+								System.out.println(message);
+
+								if (HandShakeOK[0]) {
+									switch (message.get("TYPE").asText()) {
+										case "NOTIFY":{
+											String Title = message.get("DATA").get("TITLE").asText();
+											String Text = message.get("DATA").get("TEXT").asText();
+
+											switch (message.get("DATA").get("SERVICE").asText()) {
+												case "ILANES":{
+													SendNotify("いらねす", Title, Text);
+													return;
+												}
+
+												case "RUMICHAT": {
+													SendNotify("るみチャット", Title, Text);
+													return;
+												}
+											}
+											return;
+										}
+									}
+								} else {
+									if (message.get("REQUEST").asText().equals(HandShakeID)) {
+										if (!message.get("STATUS").asBoolean()) {
+											SendNotify("るみさーばーデスクトップ", "るみさーばーデスクトップ", "常駐できませんでした。");
+											System.exit(1);
+										}
+
+										HandShakeOK[0] = true;
+										HeartBeat[0] = message.get("HEARTBEAT").asInt();
+										SendNotify("るみさーばーデスクトップ", "るみさーばーデスクトップ", "常駐しました");
+
+										Scheduler[0] = Executors.newSingleThreadScheduledExecutor();
+										Scheduler[0].scheduleAtFixedRate(new Runnable() {
+											@Override
+											public void run() {
+											}
+										}, 0, HeartBeat[0], TimeUnit.MILLISECONDS);
+									}
+								}
+							} catch (Exception EX) {
+								EX.printStackTrace();
+							}
+						}
+
+						@Override
+						public void CONNECT(CONNECT_EVENT e) {
+							try {
+								e.SEND("[\""+HandShakeID+"\", \"HELO\", \""+Main.ConfigData.get("TOKEN").asText()+"\"]");
+							} catch (Exception EX) {
+								EX.printStackTrace();
+								System.exit(1);
+							}
+						}
+
+						@Override
+						public void CLOSE(CLOSE_EVENT e) {
+							HandShakeOK[0] = false;
+							Scheduler[0].close();
+						}
+
+						@Override
+						public void EXCEPTION(Exception e) {
+						}
+					});
+
+					WS.CONNECT("wss://account.rumiserver.com/api/ws");
+				}
+			}).start();
 		} catch (AWTException EX) {
 			EX.printStackTrace();
 			JOptionPane.showMessageDialog(null, "タスクトレイに常駐失敗", "エラー", JOptionPane.ERROR_MESSAGE);
@@ -55,8 +151,8 @@ public class BackgroundService {
 		}
 	}
 
-	private NotifyAction SendNotify(String Title, String Text) throws IOException {
-		ProcessBuilder PB = new ProcessBuilder("dunstify", "--appname=るみさーばーデスクトップ", "-A", "default,default,\"click\"", Title, Text);
+	private NotifyAction SendNotify(String Service, String Title, String Text) throws IOException {
+		ProcessBuilder PB = new ProcessBuilder(Main.NotifycationProgramPath, Service, Title, Text);
 		Process P = PB.start();
 
 		InputStream IS = P.getInputStream();
