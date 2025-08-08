@@ -10,21 +10,18 @@ import java.io.InputStreamReader;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.swing.JOptionPane;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import su.rumishistem.rumi_java_lib.FETCH;
-import su.rumishistem.rumi_java_lib.FETCH_RESULT;
 import su.rumishistem.rumi_java_lib.WebSocket.Client.WebSocketClient;
 import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.CLOSE_EVENT;
 import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.CONNECT_EVENT;
 import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.MESSAGE_EVENT;
 import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.WS_EVENT_LISTENER;
+import su.rumishistem.rumiserver_desktop.ParseNotifyText.ParseRumichat;
 
 public class BackgroundService {
 	private enum NotifyAction {
@@ -86,20 +83,7 @@ public class BackgroundService {
 
 												case "RUMICHAT": {
 													Service = "るみチャット";
-
-													//部屋IDがあればそれを部屋名に変換する
-													Matcher room_matcher = Pattern.compile("<R:([^>]+)>").matcher(Title);
-													while (room_matcher.find()) {
-														String room_id = room_matcher.group(1);
-														FETCH ajax = new FETCH("https://chat.rumiserver.com/api/Room?ID=" + room_id);
-														ajax.SetHEADER("TOKEN", Main.ConfigData.get("TOKEN").asText());
-														FETCH_RESULT reslt = ajax.GET();
-														JsonNode body = new ObjectMapper().readTree(reslt.GetString());
-
-														if (body.get("STATUS").asBoolean()) {
-															Title = Title.replace(room_matcher.group(0), body.get("ROOM").get("NAME").asText());
-														}
-													}
+													Title = ParseRumichat.parse(Title);
 													break;
 												}
 											}
