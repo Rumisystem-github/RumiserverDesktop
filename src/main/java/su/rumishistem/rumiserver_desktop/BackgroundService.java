@@ -50,14 +50,6 @@ public class BackgroundService {
 		TrayIcon TI = new TrayIcon(new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB), "るみさーばーデスクトップ", TrayMenu);
 		TI.setImageAutoSize(true);
 
-		//通知をクリックした時の動作
-		TI.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				JOptionPane.showMessageDialog(null, "通知をクリックしました");
-			}
-		});
-
 		try {
 			SystemTray Tray = SystemTray.getSystemTray();
 			Tray.add(TI);
@@ -125,7 +117,19 @@ public class BackgroundService {
 
 										HandShakeOK[0] = true;
 										HeartBeat[0] = message.get("HEARTBEAT").asInt();
-										SendNotify("るみさーばーデスクトップ", "るみさーばーデスクトップ", "常駐しました");
+
+										//通知発行
+										new Thread(new Runnable() {
+											@Override
+											public void run() {
+												try {
+													SendNotify("るみさーばーデスクトップ", "るみさーばーデスクトップ", "常駐しました");
+												} catch (Exception EX) {
+													EX.printStackTrace();
+													System.exit(1);
+												}
+											}
+										}).start();
 
 										Scheduler[0] = Executors.newSingleThreadScheduledExecutor();
 										Scheduler[0].scheduleAtFixedRate(new Runnable() {
