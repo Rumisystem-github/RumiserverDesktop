@@ -22,6 +22,7 @@ import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.CONNECT_EVENT;
 import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.MESSAGE_EVENT;
 import su.rumishistem.rumi_java_lib.WebSocket.Client.EVENT.WS_EVENT_LISTENER;
 import su.rumishistem.rumiserver_desktop.ParseNotifyText.ParseRumichat;
+import su.rumishistem.rumiserver_desktop.ParseNotifyText.ParseUser;
 
 public class BackgroundService {
 	private enum NotifyAction {
@@ -74,6 +75,8 @@ public class BackgroundService {
 											String Service = message.get("DATA").get("SERVICE").asText();
 											String Title = message.get("DATA").get("TITLE").asText();
 											String Text = message.get("DATA").get("TEXT").asText();
+
+											Title = ParseUser.parse(Title);
 
 											switch (message.get("DATA").get("SERVICE").asText()) {
 												case "ILANES":{
